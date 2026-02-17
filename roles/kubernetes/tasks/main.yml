@@ -1,0 +1,21 @@
+---
+# ====================================================
+# KUBERNETES ROLE - Main Tasks
+# Deploys Kubernetes cluster (master + workers)
+# ====================================================
+
+# Master node tasks
+- name: Initialize Kubernetes master
+  include_tasks: master-init.yml
+  when: inventory_hostname in groups['k8s_masters']
+
+# Worker node tasks
+- name: Join worker nodes to cluster
+  include_tasks: worker-join.yml
+  when: 
+    - inventory_hostname in groups['k8s_workers']
+    - inventory_hostname not in groups['k8s_masters']
+
+- name: Wait for full cluster readiness
+  include_tasks: wait-cluster-ready.yml
+  when: inventory_hostname in groups['k8s_masters']

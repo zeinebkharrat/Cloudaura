@@ -1,0 +1,42 @@
+---
+# Install Kubernetes components (kubelet, kubeadm, kubectl)
+
+- name: Install kubelet
+  apt:
+    name: kubelet={{ k8s_version }}.*
+    state: present
+    force: yes
+
+- name: Hold kubelet version
+  dpkg_selections:
+    name: kubelet
+    selection: hold
+
+- name: Install kubeadm
+  apt:
+    name: kubeadm={{ k8s_version }}.*
+    state: present
+    force: yes
+
+- name: Hold kubeadm version
+  dpkg_selections:
+    name: kubeadm
+    selection: hold
+
+- name: Install kubectl (on master nodes only)
+  apt:
+    name: kubectl={{ k8s_version }}.*
+    state: present
+    force: yes
+  when: inventory_hostname in groups['k8s_masters']
+
+- name: Hold kubectl version (on master nodes only)
+  dpkg_selections:
+    name: kubectl
+    selection: hold
+  when: inventory_hostname in groups['k8s_masters']
+
+- name: Enable kubelet service
+  service:
+    name: kubelet
+    enabled: yes

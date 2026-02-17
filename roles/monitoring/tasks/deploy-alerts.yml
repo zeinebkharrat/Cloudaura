@@ -1,0 +1,25 @@
+---
+# Deploy custom Prometheus alert rules
+
+- name: Copy custom alert rules
+  copy:
+    src: high-cpu-alert.yaml
+    dest: /tmp/high-cpu-alert.yaml
+    mode: '0644'
+
+- name: Apply custom CPU alert rule
+  become: true
+  become_user: ubuntu
+  environment:
+    HOME: /home/ubuntu
+    KUBECONFIG: /home/ubuntu/.kube/config
+  command: kubectl apply -f /tmp/high-cpu-alert.yaml
+
+- name: Verify PrometheusRule is created
+  become: true
+  become_user: ubuntu
+  environment:
+    HOME: /home/ubuntu
+    KUBECONFIG: /home/ubuntu/.kube/config
+  command: kubectl get prometheusrule -n monitoring high-cpu-alert
+  changed_when: false

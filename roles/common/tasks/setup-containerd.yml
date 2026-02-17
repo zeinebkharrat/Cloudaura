@@ -1,0 +1,37 @@
+---
+# Setup and configure containerd
+
+- name: Install containerd
+  apt:
+    name: containerd.io
+    state: present
+
+- name: Ensure containerd config directory exists
+  file:
+    path: /etc/containerd
+    state: directory
+
+- name: Generate containerd default config
+  command: containerd config default
+  register: containerd_config
+  changed_when: false
+
+- name: Write containerd config
+  copy:
+    content: "{{ containerd_config.stdout }}"
+    dest: /etc/containerd/config.toml
+  notify: Restart containerd
+
+- name: Enable systemd cgroup driver for containerd
+  lineinfile:
+    path: /etc/containerd/config.toml
+    regexp: '^(\s*)SystemdCgroup\s*=\s*false'
+    line: '            SystemdCgroup = true'
+  notify: Restart containerd
+
+- name: Ensure containerd is started and enabled
+  systemd:
+    name: containerd
+    state: started
+    enabled: yes
+    daemon_reload: yes

@@ -1,0 +1,23 @@
+---
+- name: Wait until all 3 nodes are Ready
+  become_user: ubuntu
+  shell: |
+    for i in $(seq 1 90); do
+      READY=$(kubectl get nodes --no-headers 2>/dev/null | grep -c " Ready")
+      TOTAL=$(kubectl get nodes --no-headers 2>/dev/null | wc -l)
+
+      echo "Attempt $i - Ready: $READY / Total: $TOTAL"
+
+      if [ "$READY" -eq 3 ]; then
+        exit 0
+      fi
+
+      sleep 10
+    done
+
+    exit 1
+  args:
+    executable: /bin/bash
+  environment:
+    KUBECONFIG: /home/ubuntu/.kube/config
+  changed_when: false

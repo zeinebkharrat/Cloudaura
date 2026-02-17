@@ -1,0 +1,11 @@
+---
+# Global variables for all hosts
+ansible_python_interpreter: /usr/bin/python3
+ansible_become: yes
+ansible_become_method: sudo
+
+# Kubernetes version
+k8s_version: "1.29"
+
+# Network configuration
+pod_network_cidr: "10.244.0.0/16"

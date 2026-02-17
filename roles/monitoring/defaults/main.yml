@@ -1,0 +1,7 @@
+---
+# Default variables for monitoring role
+
+grafana_admin_password: "admin"
+alertmanager_smtp_host: "smtp.gmail.com:587"
+alertmanager_email_from: "cloudinapicloud@gmail.com"
+alertmanager_email_to: "cloudinapicloud@gmail.com"

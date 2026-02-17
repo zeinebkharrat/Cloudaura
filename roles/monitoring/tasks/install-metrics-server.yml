@@ -1,0 +1,22 @@
+- name: Apply metrics-server
+  become_user: ubuntu
+  command: kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+  environment:
+    KUBECONFIG: /home/ubuntu/.kube/config
+  ignore_errors: yes
+
+- name: Patch metrics-server for insecure TLS
+  become_user: ubuntu
+  shell: |
+    kubectl patch deployment metrics-server -n kube-system \
+    --type='json' \
+    -p='[{"op":"add","path":"/spec/template/spec/containers/0/args/-","value":"--kubelet-insecure-tls"}]'
+  environment:
+    KUBECONFIG: /home/ubuntu/.kube/config
+  ignore_errors: yes
+
+- name: Wait for metrics-server
+  become_user: ubuntu
+  command: kubectl rollout status deployment metrics-server -n kube-system --timeout=180s
+  environment:
+    KUBECONFIG: /home/ubuntu/.kube/config

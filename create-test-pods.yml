@@ -1,0 +1,85 @@
+---
+# ====================================================
+# CREATE TEST PODS
+# Deploy sample nginx and busybox pods for testing
+# ====================================================
+
+- name: Create test pods in Kubernetes
+  hosts: k8s_masters
+  become: yes
+  vars:
+    kubeconfig_path: "/home/ubuntu/.kube/config"
+
+  tasks:
+
+    - name: Ensure Kubernetes API is accessible
+      become_user: ubuntu
+      command: kubectl get nodes
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      register: kubectl_status
+      changed_when: false
+
+    - name: Display cluster status
+      debug:
+        msg: "{{ kubectl_status.stdout_lines }}"
+
+    - name: Create nginx pod
+      kubernetes.core.k8s:
+        kubeconfig: "{{ kubeconfig_path }}"
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: mynginx-pod
+            namespace: default
+            labels:
+              app: nginx
+          spec:
+            containers:
+              - name: nginx-container
+                image: nginx:stable
+                ports:
+                  - containerPort: 80
+      register: nginx_pod
+
+    - name: Create busybox pod for testing
+      kubernetes.core.k8s:
+        kubeconfig: "{{ kubeconfig_path }}"
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: busybox-pod
+            namespace: default
+          spec:
+            containers:
+              - name: busybox
+                image: busybox
+                command: ["sleep", "3600"]
+            restartPolicy: Always
+      register: busybox_pod
+
+    - name: Wait for pods to be ready
+      become_user: ubuntu
+      command: kubectl wait --for=condition=Ready pod/{{ item }} -n default --timeout=120s
+      loop:
+        - mynginx-pod
+        - busybox-pod
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      changed_when: false
+
+    - name: Display pod status
+      become_user: ubuntu
+      command: kubectl get pods -n default
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      register: pod_status
+      changed_when: false
+
+    - name: Show pods
+      debug:
+        msg: "{{ pod_status.stdout_lines }}"

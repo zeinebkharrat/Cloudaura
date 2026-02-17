@@ -1,0 +1,12 @@
+*.retry
+*.log
+.ansible
+__pycache__/
+*.py[cod]
+.vscode/
+.idea/
+*.swp
+*.bak
+*.tmp
+/tmp/
+.DS_Store

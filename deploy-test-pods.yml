@@ -1,0 +1,64 @@
+---
+- name: Deploy test pods
+  hosts: k8s_masters
+  become: no
+  tasks:
+    - name: Create nginx test pod
+      become_user: ubuntu
+      shell: |
+        cat <<YAML | kubectl apply -f -
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          name: mynginx-pod
+          namespace: default
+          labels:
+            app: nginx
+        spec:
+          containers:
+            - name: nginx
+              image: nginx:stable
+              ports:
+                - containerPort: 80
+        YAML
+      environment:
+        KUBECONFIG: /home/ubuntu/.kube/config
+
+    - name: Create busybox test pod
+      become_user: ubuntu
+      shell: |
+        cat <<YAML | kubectl apply -f -
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          name: busybox-pod
+          namespace: default
+        spec:
+          containers:
+            - name: busybox
+              image: busybox
+              command: ["sleep", "3600"]
+          restartPolicy: Always
+        YAML
+      environment:
+        KUBECONFIG: /home/ubuntu/.kube/config
+
+    - name: Wait for test pods
+      command: kubectl wait --for=condition=Ready pod/{{ item }} --timeout=120s
+      environment:
+        KUBECONFIG: /home/ubuntu/.kube/config
+      loop:
+        - mynginx-pod
+        - busybox-pod
+      changed_when: false
+
+    - name: Display test pods
+      command: kubectl get pods
+      environment:
+        KUBECONFIG: /home/ubuntu/.kube/config
+      register: pods_output
+      changed_when: false
+
+    - name: Show pods
+      debug:
+        msg: "{{ pods_output.stdout_lines }}"

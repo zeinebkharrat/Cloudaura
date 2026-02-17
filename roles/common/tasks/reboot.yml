@@ -1,0 +1,20 @@
+---
+# Restart services instead of rebooting to avoid containerd config issues
+
+- name: Restart containerd
+  systemd:
+    name: containerd
+    state: restarted
+    enabled: yes
+    daemon_reload: yes
+
+- name: Wait for containerd
+  wait_for:
+    timeout: 10
+
+- name: Restart kubelet
+  systemd:
+    name: kubelet
+    state: restarted
+    enabled: yes
+  ignore_errors: yes

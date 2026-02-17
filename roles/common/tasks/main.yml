@@ -1,0 +1,38 @@
+---
+# ====================================================
+# COMMON ROLE - Main Tasks
+# Prepares all nodes with required dependencies
+# ====================================================
+
+- name: Update APT cache
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: Disable SWAP (required by kubeadm)
+  shell: swapoff -a
+  changed_when: false
+
+- name: Disable SWAP permanently in fstab
+  replace:
+    path: /etc/fstab
+    regexp: '^([^#].*?\sswap\s+sw\s+.*)$'
+    replace: '# \1'
+
+- name: Load kernel modules for containerd
+  include_tasks: kernel-modules.yml
+
+- name: Configure sysctl for Kubernetes
+  include_tasks: sysctl.yml
+
+- name: Install required packages
+  include_tasks: install-packages.yml
+
+- name: Setup containerd
+  include_tasks: setup-containerd.yml
+
+- name: Install Kubernetes components
+  include_tasks: install-k8s-components.yml
+
+- name: Reboot nodes if needed
+  include_tasks: reboot.yml

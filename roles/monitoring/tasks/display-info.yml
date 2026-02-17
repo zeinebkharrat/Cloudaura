@@ -1,0 +1,38 @@
+---
+# Display monitoring access information
+
+- name: Get Grafana NodePort
+  become: true
+  become_user: ubuntu
+  environment:
+    HOME: /home/ubuntu
+    KUBECONFIG: /home/ubuntu/.kube/config
+  command: kubectl get svc -n monitoring monitoring-grafana -o jsonpath='{.spec.ports[0].nodePort}'
+  register: grafana_nodeport
+  changed_when: false
+
+- name: Get all node internal IPs
+  become: true
+  become_user: ubuntu
+  environment:
+    HOME: /home/ubuntu
+    KUBECONFIG: /home/ubuntu/.kube/config
+  command: kubectl get nodes -o jsonpath='{.items[*].status.addresses[?(@.type=="InternalIP")].address}'
+  register: node_ips
+  changed_when: false
+
+- name: Display monitoring access information
+  debug:
+    msg: |
+      ==========================================
+      Monitoring Stack Deployed Successfully!
+      ==========================================
+
+      Grafana Access (any node works):
+
+      {% for ip in node_ips.stdout.split() %}
+      http://{{ ip }}:{{ grafana_nodeport.stdout }}
+      {% endfor %}
+
+      Username: admin
+      Password: admin

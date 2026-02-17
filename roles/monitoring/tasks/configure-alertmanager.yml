@@ -1,0 +1,30 @@
+---
+# Configure Alertmanager with email notifications
+
+- name: Copy Alertmanager values file
+  copy:
+    src: alertmanager-values.yaml
+    dest: /tmp/alertmanager-values.yaml
+    mode: '0644'
+
+- name: Update Alertmanager configuration
+  become: true
+  become_user: ubuntu
+  environment:
+    HOME: /home/ubuntu
+    KUBECONFIG: /home/ubuntu/.kube/config
+  command: >
+    helm upgrade monitoring prometheus-community/kube-prometheus-stack
+    --namespace monitoring
+    --reuse-values
+    --values /tmp/alertmanager-values.yaml
+    --wait
+
+- name: Restart Alertmanager pods
+  become: true
+  become_user: ubuntu
+  environment:
+    HOME: /home/ubuntu
+    KUBECONFIG: /home/ubuntu/.kube/config
+  command: kubectl rollout restart statefulset/alertmanager-monitoring-kube-prometheus-alertmanager -n monitoring
+  changed_when: false

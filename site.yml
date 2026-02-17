@@ -1,0 +1,38 @@
+---
+- import_playbook: setup-ssh.yml
+
+- name: Install Ansible dependencies
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  tasks:
+    - name: Install python libs
+      pip:
+        name:
+          - kubernetes
+          - openshift
+        executable: pip3
+
+    - name: Install k8s collection
+      command: ansible-galaxy collection install kubernetes.core
+      changed_when: false
+
+- name: Apply common role
+  hosts: k8s_cluster
+  become: yes
+  roles:
+    - common
+
+- name: Deploy Kubernetes
+  hosts: k8s_cluster
+  become: yes
+  roles:
+    - kubernetes
+
+- name: Deploy Monitoring
+  hosts: k8s_masters
+  become: yes
+  roles:
+    - monitoring
+
+- import_playbook: create-test-pods.yml

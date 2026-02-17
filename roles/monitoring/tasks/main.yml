@@ -1,0 +1,25 @@
+---
+# Main tasks for monitoring role
+- name: Wait 60 seconds before monitoring deployment
+  pause:
+    seconds: 60
+
+- name: Install Helm
+  include_tasks: install-helm.yml
+
+- include_tasks: install-metrics-server.yml
+
+- name: Deploy Prometheus Stack
+  include_tasks: deploy-prometheus.yml
+
+- name: Configure Alertmanager
+  include_tasks: configure-alertmanager.yml
+
+- name: Deploy custom alerts
+  include_tasks: deploy-alerts.yml
+
+- name: Verify deployment
+  include_tasks: verify-deployment.yml
+
+- name: Display access information
+  include_tasks: display-info.yml

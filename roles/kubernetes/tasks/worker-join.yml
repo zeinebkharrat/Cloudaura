@@ -1,0 +1,56 @@
+---
+# Join worker nodes to Kubernetes cluster
+
+- name: Check if node already joined
+  stat:
+    path: /etc/kubernetes/kubelet.conf
+  register: kubelet_conf
+
+- name: Wait for API server
+  wait_for:
+    host: "{{ hostvars[groups['k8s_masters'][0]].ansible_host }}"
+    port: 6443
+    timeout: 180
+  when: not kubelet_conf.stat.exists
+
+- name: Wait additional time for master to be fully ready
+  pause:
+    seconds: 30
+  when: not kubelet_conf.stat.exists
+
+- name: Fetch join command from master
+  slurp:
+    src: /home/ubuntu/join-command.sh
+  register: join_command_b64
+  delegate_to: "{{ groups['k8s_masters'][0] }}"
+  when: not kubelet_conf.stat.exists
+
+- name: Decode join command
+  set_fact:
+    join_command: "{{ join_command_b64.content | b64decode | trim }}"
+  when: not kubelet_conf.stat.exists
+
+- name: Display join command (for debugging)
+  debug:
+    msg: "Join command: {{ join_command }}"
+  when: not kubelet_conf.stat.exists
+
+- name: Execute join command
+  shell: "{{ join_command }}"
+  when: not kubelet_conf.stat.exists
+  register: join_result
+  args:
+    executable: /bin/bash
+
+- name: Display join result
+  debug:
+    msg: "{{ join_result.stdout }}"
+  when: 
+    - not kubelet_conf.stat.exists
+    - join_result is defined
+
+- name: Wait for kubelet to start
+  wait_for:
+    path: /var/lib/kubelet/config.yaml
+    timeout: 120
+  when: not kubelet_conf.stat.exists

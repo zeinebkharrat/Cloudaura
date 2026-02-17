@@ -1,0 +1,75 @@
+---
+# Deploy kube-prometheus-stack using Helm
+
+- name: Create monitoring namespace (generate YAML)
+  become: true
+  become_user: ubuntu
+  environment:
+    HOME: /home/ubuntu
+    KUBECONFIG: /home/ubuntu/.kube/config
+  command: kubectl create namespace monitoring --dry-run=client -o yaml
+  register: monitoring_ns_yaml
+  changed_when: false
+
+- name: Apply monitoring namespace
+  become: true
+  become_user: ubuntu
+  environment:
+    HOME: /home/ubuntu
+    KUBECONFIG: /home/ubuntu/.kube/config
+  command: kubectl apply -f -
+  args:
+    stdin: "{{ monitoring_ns_yaml.stdout }}"
+
+- name: Check if monitoring stack is already installed
+  become: true
+  become_user: ubuntu
+  environment:
+    HOME: /home/ubuntu
+    KUBECONFIG: /home/ubuntu/.kube/config
+  command: helm list -n monitoring -o json
+  register: helm_list
+  changed_when: false
+
+- name: Set monitoring_installed fact
+  set_fact:
+    monitoring_installed: "{{ (helm_list.stdout | from_json | selectattr('name', 'equalto', 'monitoring') | list | length) > 0 }}"
+
+- name: Generate monitoring values file from template
+  template:
+    src: monitoring-values.yaml.j2
+    dest: /home/ubuntu/monitoring-values.yaml
+    mode: '0644'
+
+- name: Deploy kube-prometheus-stack
+  become: true
+  become_user: ubuntu
+  environment:
+    HOME: /home/ubuntu
+    KUBECONFIG: /home/ubuntu/.kube/config
+  command: >
+    helm upgrade --install monitoring prometheus-community/kube-prometheus-stack
+    --namespace monitoring
+    --create-namespace
+    -f /home/ubuntu/monitoring-values.yaml
+    --wait
+    --timeout=20m
+
+- name: Wait for Prometheus operator to be ready
+  become: true
+  become_user: ubuntu
+  environment:
+    HOME: /home/ubuntu
+    KUBECONFIG: /home/ubuntu/.kube/config
+  command: kubectl wait --for=condition=Available deployment/monitoring-kube-prometheus-operator -n monitoring --timeout=300s
+  changed_when: false
+
+- name: Wait for all monitoring pods to be ready
+  become: true
+  become_user: ubuntu
+  environment:
+    HOME: /home/ubuntu
+    KUBECONFIG: /home/ubuntu/.kube/config
+  command: kubectl wait --for=condition=Ready pod --all -n monitoring --timeout=600s
+  changed_when: false
+  ignore_errors: yes

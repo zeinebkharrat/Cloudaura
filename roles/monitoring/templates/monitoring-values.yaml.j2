@@ -1,0 +1,25 @@
+grafana:
+  adminPassword: admin
+  service:
+    type: NodePort
+    nodePort: 32000
+  grafana.ini:
+    analytics:
+      check_for_updates: false
+    server:
+      root_url: http://{{ hostvars[groups['k8s_masters'][0]].ansible_default_ipv4.address}}:32000
+
+prometheus:
+  service:
+    type: NodePort
+    nodePort: 32090
+  prometheusSpec:
+    storageSpec: null
+    externalUrl: http://{{ hostvars[groups['k8s_masters'][0]].ansible_default_ipv4.address}}:32090
+
+alertmanager:
+  service:
+    type: NodePort
+    nodePort: 32093
+  alertmanagerSpec:
+    externalUrl: http://{{ hostvars[groups['k8s_masters'][0]].ansible_default_ipv4.address}}:32093

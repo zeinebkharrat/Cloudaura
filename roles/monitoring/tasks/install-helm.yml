@@ -1,0 +1,46 @@
+---
+# Install Helm package manager
+
+- name: Check if Helm is installed
+  command: which helm
+  register: helm_check
+  changed_when: false
+  failed_when: false
+
+- name: Download Helm installation script
+  get_url:
+    url: https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+    dest: /tmp/get-helm-3.sh
+    mode: '0755'
+  when: helm_check.rc != 0
+
+- name: Install Helm
+  command: /tmp/get-helm-3.sh
+  when: helm_check.rc != 0
+
+- name: Verify Helm installation
+  command: helm version --short
+  register: helm_version
+  changed_when: false
+
+# --------------------------------------------------
+# Helm Repository Configuration (FORCED USER CONTEXT)
+# --------------------------------------------------
+
+- name: Ensure Prometheus Helm repository is added
+  become: true
+  become_user: ubuntu
+  environment:
+    HOME: /home/ubuntu
+  command: helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+  register: helm_repo_add
+  failed_when: false
+  changed_when: "'has been added' in helm_repo_add.stdout"
+
+- name: Update Helm repositories
+  become: true
+  become_user: ubuntu
+  environment:
+    HOME: /home/ubuntu
+  command: helm repo update
+  changed_when: false
