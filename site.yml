@@ -1,38 +1,57 @@
 ---
-- import_playbook: setup-ssh.yml
+# ====================================================
+# MAIN PLAYBOOK - Kubernetes Cluster Deployment
+# ====================================================
 
-- name: Install Ansible dependencies
+# Step 0: Setup SSH and /etc/hosts
+- name: Configure SSH and hosts file
+  import_playbook: setup-ssh.yml
+
+# Step 1: Install control node dependencies
+- name: Install Kubernetes Ansible dependencies on control node
   hosts: localhost
   connection: local
-  gather_facts: no
+  gather_facts: yes
   tasks:
-    - name: Install python libs
+    - name: Install python3-pip
+      become: yes
+      apt:
+        name: python3-pip
+        state: present
+        update_cache: yes
+
+    - name: Install required Python libraries
       pip:
         name:
           - kubernetes
           - openshift
         executable: pip3
 
-    - name: Install k8s collection
+    - name: Install kubernetes.core collection
       command: ansible-galaxy collection install kubernetes.core
       changed_when: false
 
-- name: Apply common role
+# Step 2: Apply common role to all nodes
+- name: Prepare all Kubernetes nodes
   hosts: k8s_cluster
   become: yes
   roles:
     - common
 
-- name: Deploy Kubernetes
+# Step 3: Deploy Kubernetes cluster
+- name: Deploy Kubernetes cluster
   hosts: k8s_cluster
   become: yes
   roles:
     - kubernetes
 
-- name: Deploy Monitoring
+# Step 4: Deploy monitoring stack
+- name: Deploy monitoring stack
   hosts: k8s_masters
   become: yes
   roles:
     - monitoring
 
-- import_playbook: create-test-pods.yml
+# Deploy test pods
+- name: Deploy test pods
+  import_playbook: deploy-test-pods.yml

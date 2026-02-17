@@ -1,12 +1,16 @@
 ---
-- name: Configure SSH keys and dynamic /etc/hosts
-  hosts: k8s_cluster
+# ====================================================
+# SSH SETUP PLAYBOOK
+# Automatically configure SSH keys and /etc/hosts
+# ====================================================
+
+- name: Configure SSH keys and /etc/hosts on master
+  hosts: k8s_masters
   become: yes
   gather_facts: yes
-
   tasks:
-
-    - name: Ensure .ssh exists
+    
+    - name: Ensure .ssh directory exists for ubuntu user
       file:
         path: /home/ubuntu/.ssh
         state: directory
@@ -14,35 +18,86 @@
         group: ubuntu
         mode: '0700'
 
-    - name: Generate SSH key if not exists
+    - name: Check if SSH key exists
+      stat:
+        path: /home/ubuntu/.ssh/id_rsa
+      register: ssh_key_check
+
+    - name: Generate SSH key for ubuntu user
       become_user: ubuntu
       command: ssh-keygen -t rsa -b 4096 -f /home/ubuntu/.ssh/id_rsa -N ""
-      args:
-        creates: /home/ubuntu/.ssh/id_rsa
+      when: not ssh_key_check.stat.exists
 
-    - name: Read master public key
+    - name: Read public key
       slurp:
         src: /home/ubuntu/.ssh/id_rsa.pub
-      register: master_key
-      when: inventory_hostname in groups['k8s_masters']
+      register: master_public_key
 
-    - name: Set master key fact
+    - name: Set master public key as fact
       set_fact:
-        master_ssh_key: "{{ master_key.content | b64decode }}"
+        master_ssh_key: "{{ master_public_key.content | b64decode }}"
+
+    - name: Configure /etc/hosts on master
+      blockinfile:
+        path: /etc/hosts
+        block: |
+          # Kubernetes Cluster Nodes
+          192.168.1.102  k8s-master
+          192.168.1.138  k8s-worker1
+          192.168.1.174  k8s-worker2
+        marker: "# {mark} ANSIBLE MANAGED KUBERNETES HOSTS"
+        backup: yes
+
+- name: Configure SSH keys and /etc/hosts on workers
+  hosts: k8s_workers
+  become: yes
+  gather_facts: yes
+  tasks:
+
+    - name: Skip master node
+      meta: end_host
       when: inventory_hostname in groups['k8s_masters']
 
-    - name: Add SSH key to workers
+    - name: Ensure .ssh directory exists for ubuntu user
+      file:
+        path: /home/ubuntu/.ssh
+        state: directory
+        owner: ubuntu
+        group: ubuntu
+        mode: '0700'
+
+    - name: Add master's SSH key to authorized_keys on workers
       authorized_key:
         user: ubuntu
         state: present
         key: "{{ hostvars[groups['k8s_masters'][0]].master_ssh_key }}"
-      when: inventory_hostname in groups['k8s_workers']
 
-    - name: Configure dynamic /etc/hosts
+    - name: Configure /etc/hosts on workers
       blockinfile:
         path: /etc/hosts
         block: |
-          {% for host in groups['k8s_cluster'] %}
-          {{ hostvars[host]['ansible_default_ipv4']['address'] }} {{ host }}
-          {% endfor %}
-        marker: "# {mark} ANSIBLE MANAGED K8S"
+          # Kubernetes Cluster Nodes
+          192.168.1.102  k8s-master
+          192.168.1.138  k8s-worker1
+          192.168.1.174  k8s-worker2
+        marker: "# {mark} ANSIBLE MANAGED KUBERNETES HOSTS"
+        backup: yes
+
+- name: Test SSH connectivity from master to workers
+  hosts: k8s_masters
+  become_user: ubuntu
+  gather_facts: no
+  tasks:
+
+    - name: Test SSH to all workers
+      command: ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 ubuntu@{{ item }} "echo 'SSH connection successful to {{ item }}'"
+      loop:
+        - k8s-worker1
+        - k8s-worker2
+      register: ssh_test
+      changed_when: false
+      ignore_errors: yes
+
+    - name: Display SSH test results
+      debug:
+        msg: "{{ ssh_test.results | map(attribute='stdout') | list }}"

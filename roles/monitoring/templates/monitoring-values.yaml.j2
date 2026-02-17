@@ -7,7 +7,7 @@ grafana:
     analytics:
       check_for_updates: false
     server:
-      root_url: http://{{ hostvars[groups['k8s_masters'][0]].ansible_default_ipv4.address}}:32000
+      root_url: http://{{ hostvars[groups['k8s_masters'][0]].public_ip }}:32000
 
 prometheus:
   service:
@@ -15,11 +15,11 @@ prometheus:
     nodePort: 32090
   prometheusSpec:
     storageSpec: null
-    externalUrl: http://{{ hostvars[groups['k8s_masters'][0]].ansible_default_ipv4.address}}:32090
+    externalUrl: http://{{ hostvars[groups['k8s_masters'][0]].public_ip }}:32090
 
 alertmanager:
   service:
     type: NodePort
     nodePort: 32093
   alertmanagerSpec:
-    externalUrl: http://{{ hostvars[groups['k8s_masters'][0]].ansible_default_ipv4.address}}:32093
+    externalUrl: http://{{ hostvars[groups['k8s_masters'][0]].public_ip }}:32093
