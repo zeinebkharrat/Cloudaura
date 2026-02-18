@@ -3,16 +3,16 @@
 ## 📋 Project Structure
 
 ```
-k8s-ansible-roles/
-├── inventory.ini                  # Inventory file with all hosts
+Cloudaura
+├── inventory.ini                  
 ├── group_vars/
-│   ├── all.yml                   # Global variables
-│   └── k8s_masters.yml           # Master-specific variables
-├── site.yml                      # Main playbook
-├── setup-ssh.yml                 # SSH and /etc/hosts configuration
-├── create-test-pods.yml          # Test pod deployment playbook
+│   ├── all.yml                   
+│   └── k8s_masters.yml           
+├── site.yml                      
+├── setup-ssh.yml                 
+├── create-test-pods.yml          
 ├── roles/
-│   ├── common/                   # Common preparation role
+│   ├── common/                   
 │   │   ├── tasks/
 │   │   │   ├── main.yml
 │   │   │   ├── kernel-modules.yml
@@ -23,14 +23,14 @@ k8s-ansible-roles/
 │   │   │   └── reboot.yml
 │   │   └── handlers/
 │   │       └── main.yml
-│   ├── kubernetes/               # Kubernetes deployment role
+│   ├── kubernetes/               
 │   │   ├── tasks/
 │   │   │   ├── main.yml
 │   │   │   ├── master-init.yml
 │   │   │   └── worker-join.yml
 │   │   └── templates/
 │   │       └── kubeadm-config.yaml.j2
-│   └── monitoring/               # Monitoring stack role
+│   └── monitoring/              
 │       ├── tasks/
 │       │   ├── main.yml
 │       │   ├── install-helm.yml
@@ -77,7 +77,7 @@ kubectl get nodes
 kubectl get pods -A
 ```
 
-## 📦 Individual Playbook Execution
+## Individual Playbook Execution
 
 ### 1. SSH Setup Only
 ```bash
