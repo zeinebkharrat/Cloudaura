@@ -44,7 +44,7 @@
         KUBECONFIG: /home/ubuntu/.kube/config
 
     - name: Wait for test pods
-      command: kubectl wait --for=condition=Ready pod/{{ item }} --timeout=120s
+      command: kubectl wait --for=condition=Ready pod/{{ item }} --timeout=300s
       environment:
         KUBECONFIG: /home/ubuntu/.kube/config
       loop:
